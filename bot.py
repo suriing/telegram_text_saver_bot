@@ -1,13 +1,9 @@
 import sys
 import os
 import time
-import random
 import datetime
-import subprocess
 import configparser
 import telepot
-from telepot.namedtuple import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, ForceReply
-from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 # configparser for token & chat_id
 config = configparser.ConfigParser()

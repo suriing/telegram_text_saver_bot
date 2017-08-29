@@ -1,0 +1,4 @@
+[settings]
+token = REPLACE_YOUR_BOT_TOKEN 
+chat_id = REPLACE_YOUR_CHAT_ID
+dest_dir = REPLACE_YOUR_DIRECTORY_TO_SAVE_TEXT
