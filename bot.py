@@ -18,8 +18,11 @@ def write_down(txt):
 		f.write(txt + '\n')
 
 def handle(msg):
-	chat_ids = msg['chat']['id']
+	chat_ids = str(msg['chat']['id'])
 	command = msg['text']
+	if chat_ids != chat_id:
+		bot.sendMessage(chat_ids, 'PERMISSION DENIED')
+		return
 	print('Command received: %s' % command)
 	write_down(command)
 	bot.sendMessage(chat_id, '\'' + command + '\'' + ' is saved')
