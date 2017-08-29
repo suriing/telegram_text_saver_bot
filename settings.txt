@@ -1,4 +1,0 @@
-[settings]
-token = 411631270:AAGdZqs8XSsKLtbEYG1ZQPX3ezG-XT6W0yo
-chat_id = 43894035
-dest_dir = /home/pi/
