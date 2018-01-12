@@ -1,32 +1,74 @@
+#!/usr/bin/python3
+
 import sys
 import os
 import time
 import datetime
-import configparser
-import telepot
 import subprocess
+from urllib.parse import unquote
+from pprint import pprint
+import telepot
+import configparser
 
-# configparser for token & chat_id
+# Set variables
 config = configparser.ConfigParser()
 config.read(sys.argv[1])
 token = config.get('settings','token')
 chat_id = config.get('settings','chat_id')
 dest_dir = config.get('settings','dest_dir')
 tm_n = config.get('settings','tm_n')
-tm_dest = config.get('settings','tm_dest')
+tm_mov = config.get('settings','tm_mov')
+tm_tv = config.get('settings','tm_tv')
+tm_temp = config.get('settings','tm_temp')
+tm_mode = ""
 
-def write_down(txt):
-    doc_name = str(datetime.date.today()) + '.txt'
-    with open(dest_dir + doc_name, 'a') as f:
-        f.write(txt + '\n')
+# Define sub functions
+def photo_handler(msg, chat_id):
+    pho_id = msg['photo'][-1]['file_id']
+    pho_dest = os.path.join('/media/pi/ex500/Pictures', str(msg['date']) + '.jpg')
+    bot.download_file(pho_id, pho_dest)
+    bot.sendMessage(chat_id,"Photo is saved as\n" + pho_dest) 
 
-def handle(msg):
-    content_type, chat_type, chat_id = telepot.glance(msg)
-    print(content_type, chat_type, chat_id)
-    chat_ids = str(msg['chat']['id'])
+def doc_handler(msg, chat_id):
+    global tm_mode
+    f_id, f_name, f_type = msg['document']['file_id'], msg['document']['file_name'], msg['document']['mime_type'] 
+    print(" ")
+    for ele in [f_id, f_name, f_type]:
+        print(ele)
+    print(" ")
+    if f_type == "application/x-bittorrent":
+        if tm_mode == "":
+            return bot.sendMessage(chat_id,"PLEASE SEND TORRENT FILE WITH\n'TV' or 'MOV'\n(all upper/lower case)") 
+        if tm_mode == "mov":
+            tm_dir = tm_mov
+        if tm_mode == "tv":
+            tm_dir = tm_tv
+        if tm_mode == "temp":
+            tm_dir = tm_temp
+        f_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)),f_name)
+        command = "transmission-remote -n '" + tm_n + "' -a " + f_temp + " -w " + tm_dir 
+        bot.download_file(f_id, f_temp)
+        risp = subprocess.check_output(command, shell=True)
+        bot.sendMessage(chat_id, risp)
+        subprocess.run("rm " + f_temp, shell=True)
+        tm_mode = ""
+    elif f_type == "application/octet-stream":
+        f_ext = os.path.splitext(f_name)[1]
+        if f_ext == '.smi' or f_ext == '.srt':
+            f_dest = os.path.join(tm_mov, unquote(f_name))
+            bot.download_file(f_id, f_dest)
+            bot.sendMessage(chat_id,"Sub file is saved as\n" + f_dest) 
 
-    if content_type == 'text':
-        command = msg['text']
+def text_handler(msg, chat_id):
+    global tm_mode
+    m_text = msg['text']
+    if m_text in ["mov", "MOV"]:
+        tm_mode = "mov"
+    elif m_text in ["tv", "TV"]:
+        tm_mode = "tv"
+    else:
+        chat_ids = str(msg['chat']['id'])
+        command = m_text
         if chat_ids != chat_id:
             bot.sendMessage(chat_ids, 'PERMISSION DENIED')
             return
@@ -50,18 +92,27 @@ def handle(msg):
             print('Command received: %s' % command)
             write_down(command)
             bot.sendMessage(chat_id, '\'' + command + '\'' + ' is saved')
-    elif content_type == 'document':
-        f_id = msg['document']['file_id']
-        f_name = msg['document']['file_name']
-        f_type = msg['document']['mime_type']
-        if f_type == "application/x-bittorrent":
-            f_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)),f_name)
-            command = "transmission-remote -n '" + tm_n + "' -a " + f_temp + " -w " + tm_dest 
-            bot.download_file(f_id, f_temp)
-            risp = subprocess.check_output(command, shell=True)
-            bot.sendMessage(chat_id, risp)
-            subprocess.run("rm " + f_temp, shell=True)
 
+def write_down(txt):
+    doc_name = str(datetime.date.today()) + '.txt'
+    with open(dest_dir + doc_name, 'a') as f:
+        f.write(txt + '\n')
+
+# Define main function
+def handle(msg):
+    content_type, chat_type, chat_id = telepot.glance(msg)
+    print(content_type, chat_type, chat_id)
+
+    if content_type == 'text':
+        return text_handler(msg, chat_id)
+
+    elif content_type == 'document':
+        return doc_handler(msg, chat_id)
+
+    elif content_type == 'photo':
+        return photo_handler(msg, chat_id)
+
+# Run bot
 bot = telepot.Bot(token)
 bot.message_loop(handle)
 print('Listening...')
