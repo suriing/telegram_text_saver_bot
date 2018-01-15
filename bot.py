@@ -35,15 +35,14 @@ def doc_handler(msg, chat_id):
     print(" ")
     for ele in [f_id, f_name, f_type]:
         print(ele)
-    print(" ")
     if f_type == "application/x-bittorrent":
         if tm_mode == "":
-            return bot.sendMessage(chat_id,"PLEASE SEND TORRENT FILE WITH\n'TV' or 'MOV'\n(all upper/lower case)") 
+            return bot.sendMessage(chat_id,"PLEASE SEND TORRENT FILE WITH\n'TV' or 'MOV'") 
         if tm_mode == "mov":
             tm_dir = tm_mov
-        if tm_mode == "tv":
+        elif tm_mode == "tv":
             tm_dir = tm_tv
-        if tm_mode == "temp":
+        elif tm_mode == "temp":
             tm_dir = tm_temp
         f_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)),f_name)
         command = "transmission-remote -n '" + tm_n + "' -a " + f_temp + " -w " + tm_dir 
@@ -61,14 +60,15 @@ def doc_handler(msg, chat_id):
 
 def text_handler(msg, chat_id):
     global tm_mode
-    m_text = msg['text']
-    if m_text in ["mov", "MOV"]:
+    m_text = msg['text'].lower()
+    if m_text == "mov":
         tm_mode = "mov"
-    elif m_text in ["tv", "TV"]:
+    elif m_text == "tv":
         tm_mode = "tv"
     else:
-        chat_ids = str(msg['chat']['id'])
-        command = m_text
+        tm_mode = ""
+        chat_ids = msg['chat']['id']
+        command = msg['text']
         if chat_ids != chat_id:
             bot.sendMessage(chat_ids, 'PERMISSION DENIED')
             return
@@ -77,10 +77,10 @@ def text_handler(msg, chat_id):
                 doc_name = str(datetime.date.today()) + '.txt'
             else:
                 doc_name = command[6:] + '.txt'
-            if not os.path.isfile(dest_dir + doc_name):
+            if not os.path.isfile(os.path.join(dest_dir,doc_name)):
                 bot.sendMessage(chat_id, doc_name + ' is not exist. "/list" to get list. "/read TEXT_FILE_NAME" to read specific text file.')
                 return
-            ans = subprocess.check_output("cat " + dest_dir + doc_name, shell=True)
+            ans = subprocess.check_output("cat " + os.path.join(dest_dir, doc_name), shell=True)
             bot.sendMessage(chat_id, ans)
         elif command == '/list':
             text_list = []
@@ -95,7 +95,7 @@ def text_handler(msg, chat_id):
 
 def write_down(txt):
     doc_name = str(datetime.date.today()) + '.txt'
-    with open(dest_dir + doc_name, 'a') as f:
+    with open(os.path.join(dest_dir,doc_name), 'a') as f:
         f.write(txt + '\n')
 
 # Define main function
