@@ -17,9 +17,13 @@ token = config.get('settings','token')
 chat_id = config.get('settings','chat_id')
 dest_dir = config.get('settings','dest_dir')
 tm_n = config.get('settings','tm_n')
-tm_mov = config.get('settings','tm_mov')
-tm_tv = config.get('settings','tm_tv')
+tm_d1 = config.get('settings','tm_d1')
+tm_d2 = config.get('settings','tm_d2')
 tm_temp = config.get('settings','tm_temp')
+kw_d1 = config.get('settings','kw_d1')
+kw_d2 = config.get('settings','kw_d2')
+kw_dt = config.get('settings','kw_dt')
+dic_tm = {kw_d1:tm_d1, kw_d2:tm_d2, kw_dt:tm_temp}
 tm_mode = ""
 
 # Define sub functions
@@ -37,34 +41,28 @@ def doc_handler(msg, chat_id):
         print(ele)
     if f_type == "application/x-bittorrent":
         if tm_mode == "":
-            return bot.sendMessage(chat_id,"PLEASE SEND TORRENT FILE WITH\n'TV' or 'MOV'") 
-        if tm_mode == "mov":
-            tm_dir = tm_mov
-        elif tm_mode == "tv":
-            tm_dir = tm_tv
-        elif tm_mode == "temp":
-            tm_dir = tm_temp
+            return bot.sendMessage(chat_id,"PLEASE SEND TORRENT FILE WITH\n'" + kw_d1.upper() + "' or '" + kw_d2.upper() + "'") 
+        elif tm_mode in dic_tm:
+            tm_dir = dic_tm.get(tm_mode)
         f_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)),f_name)
-        command = "transmission-remote -n '" + tm_n + "' -a " + f_temp + " -w " + tm_dir 
+        command = "transmission-remote -n '" + tm_n + "' -a '" + f_temp + "' -w " + tm_dir 
         bot.download_file(f_id, f_temp)
         risp = subprocess.check_output(command, shell=True)
         bot.sendMessage(chat_id, risp)
-        subprocess.run("rm " + f_temp, shell=True)
+        subprocess.run("rm '" + f_temp + "'", shell=True)
         tm_mode = ""
     elif f_type == "application/octet-stream":
         f_ext = os.path.splitext(f_name)[1]
         if f_ext == '.smi' or f_ext == '.srt':
-            f_dest = os.path.join(tm_mov, unquote(f_name))
+            f_dest = os.path.join(tm_d1, unquote(f_name))
             bot.download_file(f_id, f_dest)
             bot.sendMessage(chat_id,"Sub file is saved as\n" + f_dest) 
 
 def text_handler(msg, chat_id):
     global tm_mode
     m_text = msg['text'].lower()
-    if m_text == "mov":
-        tm_mode = "mov"
-    elif m_text == "tv":
-        tm_mode = "tv"
+    if m_text in dic_tm:
+        tm_mode = m_text
     else:
         tm_mode = ""
         chat_ids = msg['chat']['id']
@@ -74,7 +72,7 @@ def text_handler(msg, chat_id):
             return
         if command[:5] == '/read':
             if len(command) == 5:
-                doc_name = str(datetime.date.today()) + '.txt'
+                doc_name = datetime.date.today().strftime("%Y_%m_%d") + '.txt'
             else:
                 doc_name = command[6:] + '.txt'
             if not os.path.isfile(os.path.join(dest_dir,doc_name)):
@@ -86,7 +84,7 @@ def text_handler(msg, chat_id):
             text_list = []
             for files in os.listdir(dest_dir):
                 if files.endswith(".txt"):
-                    text_list.append(files[:-4])
+                    text_list.append('/read_' + files[:-4])
             bot.sendMessage(chat_id,"\n".join(text_list))
         else:
             print('Command received: %s' % command)
@@ -94,7 +92,7 @@ def text_handler(msg, chat_id):
             bot.sendMessage(chat_id, '\'' + command + '\'' + ' is saved')
 
 def write_down(txt):
-    doc_name = str(datetime.date.today()) + '.txt'
+    doc_name = datetime.date.today().strftime("%Y_%m_%d") + '.txt'
     with open(os.path.join(dest_dir,doc_name), 'a') as f:
         f.write(txt + '\n')
 
