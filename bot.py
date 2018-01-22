@@ -14,7 +14,7 @@ import configparser
 config = configparser.ConfigParser()
 config.read(sys.argv[1])
 token = config.get('settings','token')
-chat_id = config.get('settings','chat_id')
+chat_ids = int(config.get('settings','chat_id'))
 dest_dir = config.get('settings','dest_dir')
 tm_n = config.get('settings','tm_n')
 tm_d1 = config.get('settings','tm_d1')
@@ -64,12 +64,8 @@ def text_handler(msg, chat_id):
     if m_text in dic_tm:
         tm_mode = m_text
     else:
-        tm_mode = ""
-        chat_ids = msg['chat']['id']
         command = msg['text']
-        if chat_ids != chat_id:
-            bot.sendMessage(chat_ids, 'PERMISSION DENIED')
-            return
+        tm_mode = ""
         if command[:5] == '/read':
             if len(command) == 5:
                 doc_name = datetime.date.today().strftime("%Y_%m_%d") + '.txt'
@@ -100,6 +96,10 @@ def write_down(txt):
 def handle(msg):
     content_type, chat_type, chat_id = telepot.glance(msg)
     print(content_type, chat_type, chat_id)
+
+    if chat_ids != chat_id:
+        bot.sendMessage(chat_ids, 'PERMISSION DENIED')
+        return
 
     if content_type == 'text':
         return text_handler(msg, chat_id)
