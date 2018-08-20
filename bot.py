@@ -2,11 +2,12 @@
 
 import sys
 import os
+#import re
 import time
 import datetime
 import subprocess
 from urllib import unquote
-from pprint import pprint
+#from pprint import pprint
 import telepot
 import ConfigParser
 
@@ -44,10 +45,14 @@ def doc_handler(msg, chat_id):
         elif tm_mode in dic_tm:
             tm_dir = dic_tm.get(tm_mode)
             f_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)),f_name)
-            command = 'deluge-console "add -p ' + tm_dir + ' ' + f_temp + '"' 
+            # command = "qbittorrent-nox --webui-port=8181 --save-path=" + tm_dir + " '" + f_temp + "'"
+            command = 'deluge-console "connect 127.0.0.1:58846 admin admin; add --path=' + tm_dir + ' ' + f_temp + ' ; exit"' 
             bot.download_file(f_id, f_temp)
             risp = subprocess.check_output(command, shell=True)
-            bot.sendMessage(chat_id, risp)
+            if risp == "":
+                bot.sendMessage(chat_id, 'No Message')
+            else:
+                bot.sendMessage(chat_id, risp)
             subprocess.call("rm '" + f_temp + "'", shell=True)
         tm_mode = ""
     elif f_type == "application/octet-stream":
@@ -59,11 +64,11 @@ def doc_handler(msg, chat_id):
 
 def text_handler(msg, chat_id):
     global tm_mode
-    m_text = msg['text'].lower()
+    m_text = msg['text'].encode('utf-8').lower()
     if m_text in dic_tm:
         tm_mode = m_text
     else:
-        command = msg['text']
+        command = msg['text'].encode('utf-8')
         tm_mode = ""
         if command[:5] == '/read':
             if len(command) == 5:
@@ -80,9 +85,30 @@ def text_handler(msg, chat_id):
             for files in os.listdir(dest_dir):
                 if files.endswith(".txt"):
                     text_list.append('/read_' + files[:-4])
+            text_list.sort()
             bot.sendMessage(chat_id,"\n".join(text_list))
+        elif command[:5] == '/torr':
+            if command == '/torr':
+                bot.sendMessage(chat_id, 'usage: /torr?command [-option [arg1 [arg2]]\nexamples)\n /torr_info\n /torr_help')
+            else:
+                command = 'deluge-console "connect 127.0.0.1:58846 admin admin; ' + command[6:] + ' ; exit"' 
+                # command = command[6:] 
+                risp = subprocess.check_output(command, shell=True)
+                bot.sendMessage(chat_id, risp)
+        elif command[:7] == '/docker':
+            if command == '/docker':
+                bot.sendMessage(chat_id, 'usage: /docker?command\nlist)\n /docker_ps\n /docker_img')
+            else:
+                if command[8:] == 'ps':
+                    command = 'docker  ps -a --format "- {{.Names}}\t{{.Status}}"'
+                if command[8:] == 'img':
+                    command = 'docker images --format "- {{.Repository}}:{{.Tag}}"'
+                else:
+                    command = 'docker ' + command[8:]
+                risp = subprocess.check_output(command, shell=True)
+                bot.sendMessage(chat_id, risp)
         else:
-            print('Command received: %s' % command)
+            # print('Command received: %s' % command)
             write_down(command)
             bot.sendMessage(chat_id, '\'' + command + '\'' + ' is saved')
 
@@ -111,9 +137,10 @@ def handle(msg):
 
 # Run bot
 bot = telepot.Bot(token)
+bot.sendMessage(chat_ids, 'ASUSTOR textbot started\n::Command list\n- /list\n- /read\n- /torr\n- /docker')
 bot.message_loop(handle)
 print('Listening...')
 
 while 1:
     time.sleep(10)
-
+    
